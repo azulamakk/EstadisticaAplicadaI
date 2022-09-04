@@ -4,20 +4,6 @@ data <- read.csv('melbourne properties.csv')
 
 
 set.seed(12)
-x <- sample(x,400)
-
-#Grafico de tendencia
-plot(x, type='l')
-
-#Histograma
-hist(x)$counts
-hist(x,freq=FALSE)$counts
-hist(x, breaks=20, fraq=FALSE,
-     col=topo.colors(10), 
-     main='Histograma',
-     xlab='Landsize')
-
-#Aproximar La P(X <= 1000)
 u<-x<=1000
 sum(u)/400
 
