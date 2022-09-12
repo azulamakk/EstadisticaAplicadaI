@@ -50,11 +50,11 @@ desvioest
 sd(precioOrdyMuestr)
 
 #Coef de asimetria
-coefdeasimetria=sum(((precioOrdyMuestr-esperanza)/desvioest)^3)/400
+coefdeasimetria=sum(((precioOrdyMuestr-esperanza)/desvioest)^3)/300
 coefdeasimetria
 
 #Coef de curtosis
-coefdecurtosis= sum(((precioOrdyMuestr-esperanza)/desvioest)^4)/400
+coefdecurtosis= sum(((precioOrdyMuestr-esperanza)/desvioest)^4)/300
 coefdecurtosis
 
 #Cuantiles
@@ -68,13 +68,14 @@ q0.50
 q0.75
 
 normalizado=rnorm(y)
-plot(normalizado,type="l")
+plot(normalizado,type="l", col=terrain.colors(8), xlab = 'x', ylab='', main='')
 
 #Estandarizacion de los datos
 Qm <- c()
-Qm <- (precioOrd-mean(y)/sd(y))
+Qm <- (precioOrdyMuestr-mean(y)/sd(y))
 Qm
 
 #Histograma de datos estandarizados
-hist(Qm)
+hist(Qm, col=terrain.colors(8), breaks = 8,
+     main='Histograma datos estandarizados', xlab='Precio', ylab = 'Frecuencia')
 
