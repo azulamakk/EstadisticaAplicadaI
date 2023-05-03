@@ -102,6 +102,6 @@ se_q2_5 <- sd(replicate(1000,{
 #})
 #sd(boot) 
 
-q3_5 <- #no se
-se_q3_5 <- #no se
+#q3_5 <- #no se
+#se_q3_5 <- #no se
                   

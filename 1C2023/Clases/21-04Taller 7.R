@@ -1,6 +1,6 @@
 #Ejercicio T7.1---------------------------------
 
-
+data <- read.csv("~/Desktop/Estadistica aplicada/1C2023/Clases/melbourne properties.csv")
 
 #Cargar archivo melbourne properties
 
@@ -23,7 +23,7 @@ hist(x, freq=FALSE)
 #frecuencias absolutas
 hist(x, breaks=5)$counts
 
-fa <- c(hist(x, breaks=5)$counts[1:3],8)
+fa <- c(hist(x, breaks=7)$counts[1:5],8)
 
 #cantidad de clases
 nk <- length(fa)
@@ -32,12 +32,12 @@ nk <- length(fa)
 #Adaptar y corregir las siguientes líneas ...
 
 #vectores que contienen li y ls
-li<-hist(Price)$breaks[1:nk]
-ls<-c(hist(Price)$breaks[2:nk],NA)
+li<-hist(x)$breaks[1:nk]
+ls<-c(hist(x)$breaks[2:nk],NA)
 
 #armo un data frame para poner todo
 table<-cbind.data.frame(li,ls,fa)
-
+table
 #para sacar las fei necesitamos estimar
 #omega y beta
 #obtengo estimadores de maxima verosimilitud con optim
@@ -45,8 +45,19 @@ Verosim<-function(tita){
   return(sum(log(dweibull(x,tita[1],tita[2]))))
 }
 
+tita_opt<- optim(c(1.5,20000),
+                 Verosim,
+                 control = list(fnscale=-1))$par
+  
 omega<-optim(c(2,1000000),Verosim,control=list(fnscale=-1))$par[1]
 beta<-optim(c(2,1000000),Verosim,control=list(fnscale=-1))$par[2]
+
+# Estimadores para log-normal - Maxima verosimilitud
+eme <- log(sum(x))/300
+d <- sqrt(sum(log(x)-eme)^2/300)
+
+sum(log(dweibull(x, omega,beta)))
+sum(log(dlnorm(x, eme, d)))
 
 #calculo las probabilidades de todas las clases
 p<-c()
@@ -68,6 +79,7 @@ curve(dweibull(x,omega,beta), add=TRUE, col='red')
 
 #buscamos el estadistico del test
 attach(table)
+
 w<-sum((fa-fe)^2/fe)
 
 #calculamos el p valor
@@ -82,14 +94,14 @@ remove(table)
 #Ho: X tiene distribucion Lognormal
 #armamos la tabla para el contraste
 #frecuencias absolutas
-fa<-c(hist(Price)$counts[1:12],6)
+fa<-c(hist(x)$counts[1:12],6)
 
 #cantidad de clases
 nk<-length(fa)
 
 #vectores que contienen li y ls
-li<-hist(Price)$breaks[1:nk]
-ls<-c(hist(Price)$breaks[2:nk],NA)
+li<-hist(x)$breaks[1:nk]
+ls<-c(hist(x)$breaks[2:nk],NA)
 
 #armo un data frame para poner todo
 table<-cbind.data.frame(li,ls,fa)
@@ -133,9 +145,30 @@ w<-sum((fa-fe)^2/fe)
 #es comparar el estadistico w
 #para ver cual es mejor.
 
-
+# Calcula la log verosimilidus de los valores que yo tenga para un tita
 
 
 #Ejercicio T7.2----------------------------------
 
 #Carga del archivo Amazon
+datos <- read.csv("~/Desktop/Estadistica aplicada/1C2023/Clases/amazon.txt", sep="")
+
+x<-datos$X0
+
+tau <- mean(x)
+tau
+rho <- sd(x)
+rho
+
+#Extraemos los residuos
+e <- (x-tau)/rho
+plot(density(e))
+
+#Test Jarque Bera
+qchisq(0.95, 2)
+
+gamma <- mean(e**3)
+k <- mean(e**4)
+
+JB <- length(x)/6 * (gamma**2+0.25*(k-3)**2)
+JB
