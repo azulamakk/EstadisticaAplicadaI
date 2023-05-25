@@ -58,9 +58,3 @@ pi3 <- apply(grid, 1, potencia_empirica_3)
 plot(grid, pi, type = 'l', lwd=4)
 lines(grid, pi2, type='l', lwd=4, col='red')
 lines(grid, pi3, type='l', lwd=4, col='green')
-
-
-
-
-
-
