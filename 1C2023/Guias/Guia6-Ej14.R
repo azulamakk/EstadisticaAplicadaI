@@ -4,7 +4,10 @@ e3 <- c(285, 316, 393, 393, 336, 397)
 e4 <- c(417, 408, 431, 425, 390, 408)
 e5 <- c(344, 331, 272, 275, 272, 308)
 
-mean(e4)-mean(e5)
+vectores_combinados <- c(e1, e2, e3, e4, e5)
+
+# Calcular el desvío del vector combinado
+desvio_total <- sd(vectores_combinados)
 
 p=5
 n=30
@@ -28,4 +31,4 @@ SCTOTAL <- SCD + SCE
 Fobs <- (SCE/ (p-1)) / (SCD / (n-3))
 
 # ----------- inciso b
-qtukey(0.95, 30, 27)
+qtukey(0.95, 30, 25)

@@ -15,7 +15,6 @@ x1 <- c(0.43, -1.73, -0.09, -2.21)
 x2 <- c(2.21, -1.98, 0.8, -1.32)
 
 X <- cbind(c, x1, x2) # matriz de datos
-
 apply(X, 2, function(i) sum(2*i))
 
 #SCE
