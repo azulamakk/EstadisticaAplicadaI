@@ -19,6 +19,7 @@ plot(data$Temp, data$Ozone, pch = 20)
 
 x <- data$Temp
 y <- data$Ozone
+X <- cbind(x, y)
 
 # B1
 B1 <- cov(x,y)/var(x)
@@ -36,8 +37,9 @@ S2 <- sum((y-y_sombrero)**2)/(length(x)-2)
 Q <- sum((y-y_sombrero)**2)
 Te <- sum((y-mean(y))**2)
 
-S2_2 <- Q/(length(x)-2)
+Se_2 <- Q/(length(x)-2)
 R2 <- 1-Q/Te #El R es el coeficiente de correlación 
+R2_ajustado <- 1 - (Q/(X))/(Te/(length(x) - 1))
 
 #Ahora graficamos la recta de regresión
 plot(x,y,pch=20)
