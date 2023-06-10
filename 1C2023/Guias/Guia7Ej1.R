@@ -15,15 +15,19 @@ B1 <- cov(x,y)/var(x)
 B0 <- mean(y) - B1*mean(x)
 
 #S2
+n=length(x)
+p=2
 y_sombrero <- B0 + B1*x
-S2 <- sum((y-y_sombrero)**2)
+
+S2 <- sum((y-y_sombrero)**2)/(n-p)
 
 Q <- sum((y-y_sombrero)**2)
 Te <- sum((y-mean(y))**2)
 
-Se_B1 <- sqrt(Q/(length(x)-2))
-B1/Se_2
+Se_B1 <- sqrt(S2/sum((y-mean(y))**2))
 
 # Inciso d
 options(scipen=999)
-SE_y0 <- sqrt(S2*((19-mean(x))^2)/((sum(x-mean(x))^2)))
+
+y_sombrero2 <- B0 + B1 * 0.19
+

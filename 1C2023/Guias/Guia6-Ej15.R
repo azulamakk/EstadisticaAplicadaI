@@ -48,3 +48,22 @@ qqline(residuos)  # Agregar una línea de referencia
 # Etiquetas y título
 mtext(xlabel, side = 1, line = 3)
 mtext(ylabel, side = 2, line = 3)
+
+# ------------------ inciso d 
+# Tukey con correccion de Bonferroni
+
+unodos <- (mean(a1) - mean(a2))/sqrt(SCD*(2/5))
+unotres <- (mean(a1) - mean(a3))/sqrt(SCD*(2/5))
+unocuatro <- (mean(a1) - mean(a4))/sqrt(SCD*(2/5))
+unocinco <- (mean(a1) - mean(a5))/sqrt(SCD*(2/5))
+dostres <- (mean(a2) - mean(a3))/sqrt(SCD*(2/5))
+doscuatro <- (mean(a2) - mean(a4))/sqrt(SCD*(2/5))
+doscinco <- (mean(a2) - mean(a5))/sqrt(SCD*(2/5))
+trescuatro <- (mean(a3) - mean(a4))/sqrt(SCD*(2/5))
+trescinco <- (mean(a3) - mean(a5))/sqrt(SCD*(2/5))
+cuatrocinco <- (mean(a4) - mean(a5))/sqrt(SCD*(2/5))
+unoseis <- (mean(a1) - mean(a6))/sqrt(SCD*(2/5))
+dosseis <- (mean(a2) - mean(a6))/sqrt(SCD*(2/5))
+tresseis <- (mean(a3) - mean(a6))/sqrt(SCD*(2/5))
+cuatroseis <- (mean(a4) - mean(a6))/sqrt(SCD*(2/5))
+cincoseis <- (mean(a5) - mean(a6))/sqrt(SCD*(2/5))

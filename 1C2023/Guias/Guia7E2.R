@@ -15,11 +15,22 @@ B1 <- cov(aditivo,resistencia)/var(aditivo)
 
 # B0
 B0 <- mean(resistencia) - B1*mean(aditivo)
+abline(a = B0, b = B1, col = "red", lwd = 4)
 
 #S2
+n=length(aditivo)
+p=2
 resistencia_sombrero <- B0 + B1*aditivo
-S2 <- sum((resistencia-resistencia_sombrero)**2)/(length(aditivo)-2)
-mean(aditivo)
+
+S2 <- sum((resistencia-resistencia_sombrero)**2)/(n-p)
+
+# --------------- inciso b - Intervalo de confianza
+x0 = 0.197
+leverage <- (x0 - mean(aditivo))^2 / sum((aditivo - mean(aditivo))^2)
+
+SE <- sqrt(S2 * ((1/n)+leverage))
 
 SCx <- sum((aditivo-mean(aditivo))^2)
-0.185-0.193
+
+# --------------- inciso c - Intervalo de prediccion
+sigma2 <- sqrt(S2 * (1 + (1/n) - leverage))
