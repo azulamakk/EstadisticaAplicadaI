@@ -5,11 +5,15 @@ winequality.red <- read.csv("~/Desktop/Estadistica aplicada/1C2023/TP/winequalit
 #install.packages("ggbeeswarm")
 #install.packages("gridExtra")
 #install.packages("reshape2")
-library("reshape2")
-library("gridExtra")
-library("ggbeeswarm")
-library('tidyverse')
-library('dplyr')
+#install.packages("caret")
+#install.packages('MASS')
+library(reshape2)
+library(gridExtra)
+library(ggbeeswarm)
+library(tidyverse)
+library(dplyr)
+library(caret)
+library(MASS)
 
 #-------------------------Parte 1: Analisis descriptivo
 #-------------------------Limpieza de datos
@@ -578,101 +582,587 @@ A2 = probaBoot - qnorm(0.95, mean = 0, sd=1) * sigmaBoot2
 
 B2 = probaBoot + qnorm(0.95, mean = 0, sd=1) * sigmaBoot2
 
-#-------------------------Parte 6: Regresión
-
+#------------------------Parte 6: Regresión - Análisis exploratorio
+library(dplyr)
 DS2$quality <- as.factor(DS2$quality)
 
-attach(DS2) # Esto nos permite trabajar sin referir con al dataset
+#Agregamos una mascara booleana para poder trabajar con la variable categórica
+baseBooleanaXCat <- DS2 %>% 
+  mutate(nivelBajo = ifelse(quality == 4, 1, 0),
+         nivelMedio = ifelse(quality == 6, 1, 0),
+         nivelAlto = ifelse(quality == 8, 1, 0))
+attach(baseBooleanaXCat)
 
-#Modelo 1 - Una categórica con más de dos grupos
-modelo1 <- lm(pH ~ quality)
-summary(modelo1)
+grafico_regresion_simple <- function(x, y) {
+  B1 <- cov(x, y) / var(x)
+  B0 <- mean(y) - B1 * mean(x)
+  data <- data.frame(x = x, y = y)
+  ggplot(data, aes(x = x, y = y)) +
+    geom_point(shape = 20, size = 2) +
+    geom_abline(intercept = B0, slope = B1, color = "maroon4", size = 1) +
+    labs(x = "Acidez Fija", y = "pH", title = "Modelo de Regresión Lineal de pH y Acidez Fija") +
+    theme(text = element_text(family = "mono"),
+          plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+          panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+          panel.grid.major = element_line(color = 'grey'),
+          panel.grid.minor = element_line(color = 'grey'))
+}
 
-#Modelo 2 - Interacción de alguna categórica con alguna cuantitativa
-modelo2 <- lm(pH ~ alcohol) # este si
-summary(modelo2)
 
-#Modelo 3 - Tres numericas
-modelo3 <- lm(pH ~ fixed.acidity*alcohol*density)
-summary(modelo3) # este si
-
-modelo4 <- lm(pH ~ fixed.acidity)
-summary(modelo4) # ESTE SI. este es el mejor
-
-modelo5 <- lm(pH ~ quality*density)
-summary(modelo5) # este tal vez
-
-modelo6 <- lm(pH ~ density*fixed.acidity*quality)
-summary(modelo6) # Este si
-
-modelo7 <- lm(pH ~ quality)
-summary(modelo7)  # ESTE SI
-
-modelo8 <- lm(pH ~ alcohol*fixed.acidity)
-summary(modelo8)  # este
-
-modelo9 <- lm(pH ~ density*fixed.acidity)
-summary(modelo9)  # este
-
-modelo10 <- lm(pH ~ alcohol*density*quality)
-summary(modelo10)  # este es malisimo pero lo ponemos igual
-
-rAjust <- function(base, x1, x2=NA, x3=NA){
-  if(is.na(x2)){
+#Funcion del coeficiente R-Ajustado
+rAjust <- function(base, x1, x2 = NA, x3 = NA, x4=NA) {
+  
+  if(any(!is.na(x2)) && any(!is.na(x3)) && any(!is.na(x4))){
+    X <- cbind(1, x1, x2, x3, x4)
+    y <- matrix(base)
+    beta_somb <- solve(t(X) %*% X) %*% t(X) %*% y
+    n <- length(y)
+    p <- ncol(X)
+    df <- n - p
+    residuos <- y - X %*% beta_somb
+    SSR <- sum(residuos^2)
+    SST <- sum((y - mean(y))^2)
+    R2_ajustado <- 1 - (SSR / df) / (SST / (n - 1))
+  }
+  
+  else if (any(!is.na(x2)) && any(!is.na(x3)) && any(is.na(x4))) {
+    X <- cbind(1, x1, x2, x3)
+    y <- matrix(base)
+    beta_somb <- solve(t(X) %*% X) %*% t(X) %*% y
+    n <- length(y)
+    p <- ncol(X)
+    df <- n - p
+    residuos <- y - X %*% beta_somb
+    SSR <- sum(residuos^2)
+    SST <- sum((y - mean(y))^2)
+    R2_ajustado <- 1 - (SSR / df) / (SST / (n - 1))
+  } 
+  
+  else if (any(is.na(x3)) && any(!is.na(x2)) && any(is.na(x4))) {
+    X <- cbind(1, x1, x2)
+    y <- matrix(base)
+    beta_somb <- solve(t(X) %*% X) %*% t(X) %*% y
+    n <- length(y)
+    p <- ncol(X)
+    df <- n - p
+    residuos <- y - X %*% beta_somb
+    SSR <- sum(residuos^2)
+    SST <- sum((y - mean(y))^2)
+    R2_ajustado <- 1 - (SSR / df) / (SST / (n - 1))
+  } 
+  
+  else {
     x <- x1
     y <- base
     X <- cbind(x, y)
-    
-    B1 <- cov(x,y)/var(x)
-    
-    B0 <- mean(y) - B1*mean(x)
-    
-    y_sombrero <- B0 + B1*x
-    S2 <- sum((y-y_sombrero)**2)/(length(x)-2)
-    
-    Q <- sum((y-y_sombrero)**2)
-    Te <- sum((y-mean(y))**2)
-    
-    Se_2 <- Q/(length(x)-2)
-    R2 <- 1-Q/Te 
-    n <- length(y)
-    R2_ajustado <- 1 - (1 - R2) * ((n - 1) / (n - 1 - 1))
-  } 
-  else if(is.na(x3)){
-    X <- cbind(1, x1, x2)
-    y <- matrix(base)
-    
-    beta_somb <- solve(t(X) %*% X) %*% t(X) %*% y
-    
-    n <- length(y)
-    p <- ncol(X)
-    df <- n - p
-    
-    residuos <- y - X %*% beta_somb
-    
-    SSR <- sum(residuos^2)
-    SST <- sum((y - mean(y))^2)
-    
-    R2_ajustado <- 1 - (SSR/(df))/(SST/(n - 1))
-  }
-  else{
-    X <- cbind(1, x1, x2, x3)
-    y <- matrix(base)
-    
-    beta_somb <- solve(t(X) %*% X) %*% t(X) %*% y
-    
-    n <- length(y)
-    p <- ncol(X)
-    df <- n - p
-    
-    residuos <- y - X %*% beta_somb
-    
-    SSR <- sum(residuos^2)
-    SST <- sum((y - mean(y))^2)
-    
-    R2_ajustado <- 1 - (SSR/(df))/(SST/(n - 1))
+    B1 <- cov(x, y) / var(x)
+    B0 <- mean(y) - B1 * mean(x)
+    y_sombrero <- B0 + B1 * x
+    S2 <- sum((y - y_sombrero) ** 2) / (length(x) - 2)
+    Q <- sum((y - y_sombrero) ** 2)
+    Te <- sum((y - mean(y)) ** 2)
+    R2_ajustado <- 1 - (Q / (length(x) - 2)) / (Te / (length(x) - 1))
   }    
   return(R2_ajustado)
 }
 
+#Funcion de la Varianza Residual
+vari_resi <- function(modelo, pH){
+  n <- length(pH)
+  return(sum((pH-modelo$fitted.values)**2)/(n-2))
+}
+
+#Funcion para el determinante de la matriz de correlacion
+det_mat_cor <- function(base, x1, x2 = NA, x3 = NA, x4 = NA) {
+  
+  if (any(!is.na(x2)) && any(!is.na(x3)) && any(!is.na(x4))) {
+    X <- cbind(base, x1, x2, x3, x4)
+  } 
+  
+  else if (any(!is.na(x2)) && any(!is.na(x3)) && any(is.na(x4))) {
+    X <- cbind(base, x1, x2, x3)
+  } 
+  
+  else if (any(is.na(x3)) && any(!is.na(x2)) && any(is.na(x4))) {
+    X <- cbind(base, x1, x2)
+  } 
+  
+  else {
+    X <- cbind(base, x1)
+  }
+  determinante <- det(cor(X))
+  return(determinante)
+}
+
+#Funcion para el coeficiente Cp de Mallows
+cpMallows <- function(base, x1, x2 = NA, x3 = NA, x4 = NA) {
+  
+  if (any(!is.na(x2)) && any(!is.na(x3)) && any(!is.na(x4))) {
+    X <- cbind(1, x1, x2, x3, x4)
+    y <- base
+    beta <- solve(t(X) %*% X) %*% t(X) %*% y
+    y_hat <- X %*% beta
+    residuos <- y - y_hat
+    SSE <- sum(residuos^2)
+    n <- length(y)
+    p <- ncol(X) - 1
+    sigma_hat_sq <- SSE / (n - p)
+    Cp <- (SSE / sigma_hat_sq) - (n - 2 * p)
+    Cp_sobreP <- Cp/p
+  } 
+  
+  else if (any(!is.na(x2)) && any(!is.na(x3)) && any(is.na(x4))) {
+    X <- cbind(1, x1, x2, x3)
+    y <- base
+    beta <- solve(t(X) %*% X) %*% t(X) %*% y
+    y_hat <- X %*% beta
+    residuos <- y - y_hat
+    SSE <- sum(residuos^2)
+    n <- length(y)
+    p <- ncol(X) - 1
+    sigma_hat_sq <- SSE / (n - p)
+    Cp <- (SSE / sigma_hat_sq) - (n - 2 * p)
+    Cp_sobreP <- Cp/p
+  } 
+  
+  else if (any(is.na(x3)) && any(!is.na(x2)) && any(is.na(x4))) {
+    X <- cbind(1, x1, x2)
+    y <- base
+    beta <- solve(t(X) %*% X) %*% t(X) %*% y
+    y_hat <- X %*% beta
+    residuos <- y - y_hat
+    SSE <- sum(residuos^2)
+    n <- length(y)
+    p <- ncol(X) - 1
+    sigma_hat_sq <- SSE / (n - p)
+    Cp <- (SSE / sigma_hat_sq) - (n - 2 * p)
+    Cp_sobreP <- Cp/p
+  } 
+  
+  else {
+    x <- x1
+    y <- base
+    B1 <- cov(x, y) / var(x)
+    B0 <- mean(y) - B1 * mean(x)
+    y_hat <- B0 + B1 * x
+    residuos <- y - y_hat
+    SSE <- sum(residuos^2)
+    n <- length(y)
+    p <- 2
+    sigma_hat_sq <- SSE / (n - p)
+    Cp <- SSE / sigma_hat_sq - n + 2 * p
+    Cp_sobreP <- Cp/p
+  }
+  return(Cp_sobreP)
+}
+
+#Funcion para PRESS
+Press <- function(base, x1, x2 = NA, x3 = NA, x4 = NA){
+  k <- 10 
+  folds <- createFolds(base, k = k)
+  press <- rep(0, length(base))
+  set.seed(13)
+  if (any(!is.na(x2)) && any(!is.na(x3)) && any(!is.na(x4))) {
+    for (i in 1:k) {
+      datos_entrenamiento <- base[-folds[[i]]]
+      datos_validacion <- base[folds[[i]]]
+      x1_entrenamiento <- x1[-folds[[i]]]
+      x1_validacion <- x1[folds[[i]]]
+      x2_entrenamiento <- x2[-folds[[i]]]
+      x2_validacion <- x2[folds[[i]]]
+      x3_entrenamiento <- x3[-folds[[i]]]
+      x3_validacion <- x3[folds[[i]]]
+      x4_entrenamiento <- x4[-folds[[i]]]
+      x4_validacion <- x4[folds[[i]]]
+      
+      X_entrenamiento <- cbind(1, x1_entrenamiento, x2_entrenamiento, x3_entrenamiento, x4_entrenamiento)
+      Y_entrenamiento <- datos_entrenamiento
+      
+      coeficientes <- solve(t(X_entrenamiento) %*% X_entrenamiento) %*% t(X_entrenamiento) %*% Y_entrenamiento
+      
+      X_validacion <- cbind(1, x1_validacion, x2_validacion, x3_validacion, x4_validacion)
+      valores_ajustados <- X_validacion %*% coeficientes
+      residuos_press <- datos_validacion - valores_ajustados
+      press[folds[[i]]] <- sum(residuos_press^2)
+    }
+    
+    suma_press <- sum(press)
+  } else if (any(!is.na(x2)) && any(!is.na(x3)) && any(is.na(x4))) {
+    for (i in 1:k) {
+      datos_entrenamiento <- base[-folds[[i]]]
+      datos_validacion <- base[folds[[i]]]
+      x1_entrenamiento <- x1[-folds[[i]]]
+      x1_validacion <- x1[folds[[i]]]
+      x2_entrenamiento <- x2[-folds[[i]]]
+      x2_validacion <- x2[folds[[i]]]
+      x3_entrenamiento <- x3[-folds[[i]]]
+      x3_validacion <- x3[folds[[i]]]
+      
+      X_entrenamiento <- cbind(1, x1_entrenamiento, x2_entrenamiento, x3_entrenamiento)
+      Y_entrenamiento <- datos_entrenamiento
+      
+      coeficientes <- solve(t(X_entrenamiento) %*% X_entrenamiento) %*% t(X_entrenamiento) %*% Y_entrenamiento
+      
+      X_validacion <- cbind(1, x1_validacion, x2_validacion, x3_validacion)
+      valores_ajustados <- X_validacion %*% coeficientes
+      residuos_press <- datos_validacion - valores_ajustados
+      press[folds[[i]]] <- sum(residuos_press^2)
+    }
+    suma_press <- sum(press)
+  } else if (any(is.na(x3)) && any(!is.na(x2)) && any(is.na(x4))) {
+    for (i in 1:k) {
+      datos_entrenamiento <- base[-folds[[i]]]
+      datos_validacion <- base[folds[[i]]]
+      x1_entrenamiento <- x1[-folds[[i]]]
+      x1_validacion <- x1[folds[[i]]]
+      x2_entrenamiento <- x2[-folds[[i]]]
+      x2_validacion <- x2[folds[[i]]]
+      
+      media_base <- mean(datos_entrenamiento)
+      media_x1 <- mean(x1_entrenamiento)
+      media_x2 <- mean(x2_entrenamiento)
+      
+      SSB <- sum((datos_entrenamiento - media_base)^2)
+      SSB_x1 <- sum((x1_entrenamiento - media_x1)^2)
+      SSB_x2 <- sum((x2_entrenamiento - media_x2)^2)
+      SSB_x1x2 <- sum((x1_entrenamiento - media_x1) * (x2_entrenamiento - media_x2))
+      
+      coef_x1 <- SSB_x2 / SSB_x1x2
+      coef_x2 <- SSB_x1 / SSB_x1x2
+      
+      intercepto <- media_base - coef_x1 * media_x1 - coef_x2 * media_x2
+      valores_ajustados <- intercepto + coef_x1 * x1_validacion + coef_x2 * x2_validacion
+      residuos_press <- datos_validacion - valores_ajustados
+      press[folds[[i]]] <- sum(residuos_press^2)
+    }
+    suma_press <- sum(press)
+  } else {
+    for (i in 1:k) {
+      datos_entrenamiento <- base[-folds[[i]]]
+      datos_validacion <- base[folds[[i]]]
+      
+      media_x <- mean(x1[-folds[[i]]])
+      media_y <- mean(datos_entrenamiento)
+      SPC <- sum((x1[-folds[[i]]] - media_x) * (datos_entrenamiento - media_y))
+      SSX <- sum((x1[-folds[[i]]] - media_x)^2)
+      coef <- SPC / SSX
+      intercepto <- media_y - coef * media_x
+      
+      valores_ajustados <- intercepto + coef * x1[folds[[i]]]
+      residuos_press <- datos_validacion - valores_ajustados
+      
+      press[folds[[i]]] <- sum(residuos_press^2)
+    }
+    suma_press <- sum(press)
+  }
+  return(suma_press)
+}
+
+#Modelo 1 - Regresión entre numérica y categórica de 3 grupos
+modelo1 <- lm(pH ~ quality)
+summary(modelo1)
+
+vari_resi(modelo1, pH)
+rAjust(pH, nivelMedio, nivelAlto)
+cpMallows(pH, nivelMedio, nivelAlto)
+Press(pH, nivelMedio, nivelAlto)
+
+#Modelo 2 - Regresión Simple entre variables numéricas
+modelo2 <- lm(pH ~ alcohol) 
+summary(modelo2)
+
+vari_resi(modelo2, pH)
+rAjust(pH, alcohol)
+cpMallows(pH, alcohol)
+Press(pH, alcohol)
+
+#Modelo 3 - Regresión Simple entre variables numéricas
+modelo3 <- lm(pH ~ fixed.acidity)
+summary(modelo3)
+
+vari_resi(modelo3, pH)
+rAjust(pH, fixed.acidity)
+cpMallows(pH, fixed.acidity)
+Press(pH, fixed.acidity)
+
+#Modelo 4 - Regresión Simple entre variables numéricas
+modelo4 <- lm(pH ~ density)
+summary(modelo4) 
+
+vari_resi(modelo4, pH)
+rAjust(pH, density)
+cpMallows(pH, density)
+Press(pH, density)
+
+#Modelo 5 - Regresión Múltiple con 1 variable explicativa categórica y 1 numérica
+modelo5 <- lm(pH ~ quality*density)
+summary(modelo5)
+
+vari_resi(modelo5, pH)
+rAjust(pH, nivelMedio, nivelAlto, density)
+cpMallows(pH, nivelMedio, nivelAlto, density)
+det_mat_cor(pH, nivelMedio, nivelAlto, density)
+Press(pH, nivelMedio, nivelAlto, density)
+
+#Modelo 6 - Regresión Múltiple con 2 variables explicativas numéricas
+modelo6 <- lm(pH ~ alcohol*fixed.acidity)
+summary(modelo6)  
+
+vari_resi(modelo6, pH)
+rAjust(pH, alcohol, fixed.acidity)
+cpMallows(pH, alcohol, fixed.acidity)
+det_mat_cor(pH, alcohol, fixed.acidity)
+Press(pH, alcohol, fixed.acidity)
+
+#Modelo 7 - Regresión Múltiple con 2 variables explicativas numéricas
+modelo7 <- lm(pH ~ density*fixed.acidity)
+summary(modelo7)  
+
+vari_resi(modelo7, pH)
+rAjust(pH, density, fixed.acidity)
+cpMallows(pH, density, fixed.acidity)
+det_mat_cor(pH, density, fixed.acidity)
+Press(pH, density, fixed.acidity)
+
+#Modelo 8 - Regresión Múltiple con 3 variables explicativas numéricas
+modelo8 <- lm(pH ~ fixed.acidity*alcohol*density)
+summary(modelo8) 
+
+vari_resi(modelo8, pH)
 rAjust(pH, fixed.acidity, alcohol, density)
+cpMallows(pH, fixed.acidity, alcohol, density)
+det_mat_cor(pH, fixed.acidity, alcohol, density)
+Press(pH, fixed.acidity, alcohol, density)
+
+#Modelo 9 - Regresión Múltiple con 2 variables explicativas numéricas y una categórica
+modelo9 <- lm(pH ~ density*fixed.acidity*quality)
+summary(modelo9) 
+
+vari_resi(modelo9, pH)
+rAjust(pH, fixed.acidity, density, nivelMedio, nivelAlto)
+cpMallows(pH, density, fixed.acidity, nivelMedio, nivelAlto)
+det_mat_cor(pH, nivelMedio, nivelAlto, density, fixed.acidity)
+Press(pH, nivelMedio, nivelAlto, density, fixed.acidity)
+
+#Modelo 10 - Regresión Múltiple con 2 variables explicativas numéricas y una categórica
+modelo10 <- lm(pH ~ alcohol*density*quality)
+summary(modelo10)  
+
+vari_resi(modelo10, pH)
+rAjust(pH, alcohol, density, nivelMedio, nivelAlto)
+cpMallows(pH, alcohol, density, nivelMedio, nivelAlto)
+det_mat_cor(pH, nivelMedio, nivelAlto, density, alcohol)
+Press(pH, nivelMedio, nivelAlto, density, alcohol)
+
+#-------------------------Parte 7: Regresión - Diagnóstico
+
+todos_los_datos <- grafico_regresion_simple(fixed.acidity, pH)
+
+#a) Supuesto de linealidad de la regresión
+
+df <- data.frame(fixed.acidity, rstandard(modelo3))
+ggplot(df, aes(x = fixed.acidity, y = rstandard(modelo3))) +
+  geom_point(shape = 20, size = 3, color = "maroon4") +
+  labs(x = "Acidez fija", y = "Residuos Estandarizados", title = "Residuos Estandarizados vs. Acidez Fija") +
+  theme(text = element_text(family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+        panel.grid.major = element_line(color = 'grey'),
+        panel.grid.minor = element_line(color = 'grey'))  
+
+#b) Supuesto de normalidad 
+
+#Un histograma
+df2 <- data.frame(residuals = rstandard(modelo3))
+ggplot(df2, aes(x = residuals)) +
+  geom_histogram(binwidth = 1, boundary = 0, fill = "maroon2", color = "maroon4", alpha = 0.7) +
+  labs(x = "Residuos Estandarizados", y = "Frecuencia", title = "Histograma de Residuos Estandarizados") +
+  theme(text = element_text(family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+        panel.grid.major = element_line(color = 'grey'),
+        panel.grid.minor = element_line(color = 'grey'))  
+
+#Un qqplot
+residuals <- rstandard(modelo3)
+df <- data.frame(Theoretical = qnorm(ppoints(length(residuals))), Observed = residuals)
+ggplot(df, aes(sample = Observed)) +
+  stat_qq(color = "maroon4") +
+  stat_qq_line() +
+  labs(x = "Cuantiles teóricos", y = "Cuantiles observados", title = "QQPlot para evaluar normalidad") +
+  theme(text = element_text(family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+        panel.grid.major = element_line(color = 'grey'),
+        panel.grid.minor = element_line(color = 'grey'))  
+
+#c) Supuesto de homocedasticidad
+B1 <- cov(fixed.acidity,pH)/var(fixed.acidity)
+B0 <- mean(pH) - B1*mean(fixed.acidity)
+y_sombrero <- B0 + B1*fixed.acidity
+
+ggplot() +
+  geom_point(aes(y = rstandard(modelo3), x = y_sombrero), pch = 20, size = 2) +
+  geom_hline(yintercept = mean(rstandard(modelo3)), color = "maroon", size = 1) + 
+  labs(x = "Valor estimado de Y", y = "Residuos", title = "Residuos vs. Valor estimado de Y") + 
+  theme(text = element_text(family = "mono"),
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+    panel.grid.major = element_line(color = 'grey'),       
+    panel.grid.minor = element_line(color = 'grey'))
+
+# Como no hay homocedasticidad se va a aplicar el método Box Cox
+# Aplicamos la transformación de Box-Cox a la variable explicativa y la variable respuesta
+boxcox_results <- boxcox(pH ~ fixed.acidity)
+
+# Identificar el valor óptimo de lambda
+lambda <- boxcox_results$x[which.max(boxcox_results$y)]
+lambda
+
+# Aplicamos la transformación de Box-Cox a la variable respuesta
+pH_transformed <- (pH^lambda - 1) / lambda
+
+# Ajustamos el modelo de regresión utilizando la variable transformada
+model <- lm(pH_transformed ~ fixed.acidity)
+
+residuals <- rstandard(model)
+
+
+# Gráfico de residuos estandarizados vs. valores ajustados
+ggplot(data, aes(x = fitted(model), y = residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, color = "maroon") +
+  xlab("Valores ajustados") +
+  ylab("Residuos estandarizados") +
+  ggtitle("Gráfico de residuos estandarizados vs. valores ajustados")+
+  theme(text = element_text(family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+        panel.grid.major = element_line(color = 'grey'),
+        panel.grid.minor = element_line(color = 'grey'))  
+
+
+# Gráfico de residuos estandarizados vs. la variable explicativa transformada
+ggplot(data, aes(x = fixed.acidity, y = residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, color = 'maroon') +
+  xlab("Variable explicativa transformada") +
+  ylab("Residuos estandarizados") +
+  ggtitle("Gráfico de residuos estandarizados vs. variable explicativa transformada")+
+  theme(text = element_text(family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+        panel.grid.major = element_line(color = 'grey'),
+        panel.grid.minor = element_line(color = 'grey'))  
+
+
+#d) Supuesto de independencia 
+
+residuos <- resid(modelo3)
+valores_ajustados <- fitted(modelo3)
+
+data <- data.frame(residuos = residuos, valores_ajustados = valores_ajustados)
+ggplot(data, aes(x = valores_ajustados, y = residuos)) +
+  geom_point(shape = 20, size = 2, color = "maroon4") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(x = "Valores Ajustados", y = "Residuos",
+       title = "Gráfico de Residuos vs Valores Ajustados") +
+  theme(text = element_text(family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+        panel.grid.major = element_line(color = 'grey'),
+        panel.grid.minor = element_line(color = 'grey'))  
+
+#e) Outliers y puntos influyentes
+
+distancia_cook <- cooks.distance(modelo3)
+data <- data.frame(Observacion = seq_along(distancia_cook), DistanciaCook = distancia_cook)
+ggplot(data, aes(x = Observacion, y = DistanciaCook)) +
+  geom_point(stat = "identity", fill = "steelblue", width = 0.5, color = "maroon4") +
+  labs(x = "Observación", y = "Distancia de Cook", title = "Distancia de Cook por Observación") +
+  theme(text = element_text(family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+        panel.grid.major = element_line(color = 'grey'),
+        panel.grid.minor = element_line(color = 'grey'))  
+
+#Regresión con y si estoy puntos influyentes
+DS2_copia <- DS2
+DS2_copia <- transform(DS2_copia, distancia_ck = c(distancia_cook))
+sin_palancas <- DS2_copia[!(distancia_cook > 0.04),]
+
+sin_palancas_grafico <- grafico_regresion_simple(sin_palancas$fixed.acidity, sin_palancas$pH)
+
+#Gráfico de 2 regresiones
+grafico_regresion_simple_2 <- function(x1, y1, x2, y2) {
+  B1 <- cov(x1, y1) / var(x1)
+  B0 <- mean(y1) - B1 * mean(x1)
+  B1_2 <- cov(x2, y2) / var(x2)
+  B0_2 <- mean(y2) - B1_2 * mean(x2)
+  data <- data.frame(x = x1, y = y1)
+  ggplot(data, aes(x = x1, y = y1)) +
+    geom_point(shape = 20, size = 2) +
+    geom_abline(intercept = B0, slope = B1, color = "maroon4", size = 1) +
+    geom_abline(intercept = B0_2, slope = B1_2, color = "deeppink3", size = 1)+
+    labs(x = "Acidez Fija", y = "pH", title = "Modelo de Regresión Lineal con y sin outliers 'palanca'") +
+    theme(text = element_text(family = "mono"),
+          plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+          panel.background = element_rect(fill = '#F0F0F0', color = 'grey'),
+          panel.grid.major = element_line(color = 'grey'),
+          panel.grid.minor = element_line(color = 'grey'))
+}
+
+grafico_regresion_simple_2(fixed.acidity, pH, sin_palancas$fixed.acidity, sin_palancas$pH)
+
+#------------------------Parte 7: Regresión - Validacion del modelo
+
+# Tomamos las variables producto de la transformacion de box-cox a fines de obtener los parametros
+B11 <- cov(fixed.acidity,pH_transformed)/var(fixed.acidity)
+B01 <- mean(pH_transformed) - B1*mean(fixed.acidity)
+
+p=2
+n=length(fixed.acidity)
+pHTransformadoSombrero <- B01 + B11*fixed.acidity
+
+S21 <- sum((pH_transformed-pHTransformadoSombrero)**2)/(n-p)
+
+Se_B11 <- sqrt(S21/sum((pH_transformed-mean(pH_transformed))**2))
+
+# Intervalo para B1 transformado
+v <- n-p
+LI1 <- B11 + qt(0.05,v) * Se_B11
+LS1 <- B11 + qt(0.95, v) * Se_B11
+
+# Intervalo para B0 transformado
+LIB0 <- B01 + qt(0.05, v) * Se_B11
+LSB0 <- B01 + qt(0.95, v) * Se_B11
+
+# Dado que 0 forma parte del intervalo, no se rechaza que el modelo lineal aplicado a los datos
+# luego de la transformacion no sea adecuado. Por esta razon, analizamos el comportamiento de las variables
+# sin la transformacion
+
+B12 = cov(fixed.acidity,pH)/var(fixed.acidity)
+B02 <- mean(pH) - B12*mean(fixed.acidity)
+
+pHSombrero <- B02 + B12*fixed.acidity
+
+S22 <- sum((pH-pHSombrero)**2)/(n-p)
+
+Se_B12 <- sqrt(S22/sum((pH-mean(pH))**2))
+
+LI2 <- B12 + qt(0.05,v) * Se_B12
+LS2 <- B12 + qt(0.95, v) * Se_B12
+
+# En este caso, el intervalo no contiene al 0 por lo que no descartamos la posilidad de que
+# el modelo lineal sin trandormacion sea el adecuado para las variables elegias
+
+LIB01 <- B02 + qt(0.05, v) * Se_B12
+LSB01 <- B02 + qt(0.95, v) * Se_B12
+
+#------------------------Parte 8: Regresión -Aplicación-
+# Intervalo de prediccion para x = 8
+ySombreroPuntual = B02 + B12*8
+sigmaYSombrero <- sqrt(S22 * (1+(1/length(fixed.acidity))-((8-mean(fixed.acidity))/sum((fixed.acidity-mean(fixed.acidity))^2))))
+
+LIPredict <- ySombreroPuntual + qt(0.05, v) * sigmaYSombrero
+LSPredict <- ySombreroPuntual + qt(0.95, v) * sigmaYSombrero
