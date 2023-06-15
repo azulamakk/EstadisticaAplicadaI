@@ -880,6 +880,7 @@ Press(pH, alcohol)
 modelo3 <- lm(pH ~ fixed.acidity)
 summary(modelo3)
 
+cor(fixed.acidity, pH)
 vari_resi(modelo3, pH)
 rAjust(pH, fixed.acidity)
 cpMallows(pH, fixed.acidity)
@@ -1011,23 +1012,6 @@ ggplot() +
     panel.grid.major = element_line(color = 'grey'),       
     panel.grid.minor = element_line(color = 'grey'))
 
-# Como no hay homocedasticidad se va a aplicar el método Box Cox
-# Aplicamos la transformación de Box-Cox a la variable explicativa y la variable respuesta
-boxcox_results <- boxcox(pH ~ fixed.acidity)
-
-# Identificar el valor óptimo de lambda
-lambda <- boxcox_results$x[which.max(boxcox_results$y)]
-lambda
-
-# Aplicamos la transformación de Box-Cox a la variable respuesta
-pH_transformed <- (pH^lambda - 1) / lambda
-
-# Ajustamos el modelo de regresión utilizando la variable transformada
-model <- lm(pH_transformed ~ fixed.acidity)
-
-residuals <- rstandard(model)
-
-
 # Gráfico de residuos estandarizados vs. valores ajustados
 ggplot(data, aes(x = fitted(model), y = residuals)) +
   geom_point() +
@@ -1115,31 +1099,6 @@ grafico_regresion_simple_2 <- function(x1, y1, x2, y2) {
 grafico_regresion_simple_2(fixed.acidity, pH, sin_palancas$fixed.acidity, sin_palancas$pH)
 
 #------------------------Parte 7: Regresión - Validacion del modelo
-
-# Tomamos las variables producto de la transformacion de box-cox a fines de obtener los parametros
-B11 <- cov(fixed.acidity,pH_transformed)/var(fixed.acidity)
-B01 <- mean(pH_transformed) - B1*mean(fixed.acidity)
-
-p=2
-n=length(fixed.acidity)
-pHTransformadoSombrero <- B01 + B11*fixed.acidity
-
-S21 <- sum((pH_transformed-pHTransformadoSombrero)**2)/(n-p)
-
-Se_B11 <- sqrt(S21/sum((pH_transformed-mean(pH_transformed))**2))
-
-# Intervalo para B1 transformado
-v <- n-p
-LI1 <- B11 + qt(0.05,v) * Se_B11
-LS1 <- B11 + qt(0.95, v) * Se_B11
-
-# Intervalo para B0 transformado
-LIB0 <- B01 + qt(0.05, v) * Se_B11
-LSB0 <- B01 + qt(0.95, v) * Se_B11
-
-# Dado que 0 forma parte del intervalo, no se rechaza que el modelo lineal aplicado a los datos
-# luego de la transformacion no sea adecuado. Por esta razon, analizamos el comportamiento de las variables
-# sin la transformacion
 
 B12 = cov(fixed.acidity,pH)/var(fixed.acidity)
 B02 <- mean(pH) - B12*mean(fixed.acidity)

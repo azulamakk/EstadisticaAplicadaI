@@ -22,3 +22,4 @@ abline(a = B02, b = B12, col = "red", lwd = 4)
 presion_sombreroLog <- B02 + B12*volumenLog
 S2 <- sum((presionLog-presion_sombreroLog)**2)/(length(volumenLog)-2)
 Se_B1 <- sqrt(S2/sum((volumenLog-mean(volumenLog))**2))
+
