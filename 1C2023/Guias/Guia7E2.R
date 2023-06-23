@@ -33,4 +33,4 @@ SE <- sqrt(S2 * ((1/n)+leverage))
 SCx <- sum((aditivo-mean(aditivo))^2)
 
 # --------------- inciso c - Intervalo de prediccion
-sigma2 <- sqrt(S2 * (1 + (1/n) - leverage))
+sigma2 <- sqrt(S2 * (1 + (1/n) + leverage))

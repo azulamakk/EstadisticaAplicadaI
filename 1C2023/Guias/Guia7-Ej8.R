@@ -29,10 +29,10 @@ y0_sombrero <- B0 + B1*5
 h0 <- ((5-mean(x))**2)/sum((x-mean(x))**2)
 
 tObs <- B1 / se
-n <- length(locales$superficie)
+n <- length(y)
 pValor <- 1 - pt(tObs, n-2)
 
 prediccionSe = sqrt(s2*((1/n)+h0+1))
-t05 <- qt(0.9, n-2)
+t05 <- qt(0.05, n-2)
 
-y0.9 <- y0_sombrero - t05 * prediccionSe
+y0.9 <- y0_sombrero + t05 * prediccionSe
